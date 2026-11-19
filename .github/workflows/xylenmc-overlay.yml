@@ -1,0 +1,53 @@
+name: XylenMC Android Overlay APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xylenmc-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Extract XylenMC project archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f XylenMC_Native_Overlay_Source.zip
+          mkdir -p "$RUNNER_TEMP/xylenmc-project"
+          unzip -q XylenMC_Native_Overlay_Source.zip -d "$RUNNER_TEMP/xylenmc-project"
+          test -f "$RUNNER_TEMP/xylenmc-project/settings.gradle.kts"
+          test -f "$RUNNER_TEMP/xylenmc-project/app/build.gradle.kts"
+          echo "XYLEN_PROJECT=$RUNNER_TEMP/xylenmc-project" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        working-directory: ${{ runner.temp }}/xylenmc-project
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: XylenMC-debug-APK
+          path: ${{ runner.temp }}/xylenmc-project/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+          
