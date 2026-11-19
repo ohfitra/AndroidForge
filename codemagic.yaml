@@ -1,0 +1,47 @@
+workflows:
+  xylenmc-android:
+    name: XylenMC Android APK
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    environment:
+      vars:
+        PACKAGE_NAME: "com.aistudio.xylenmc.k9v2qx"
+
+    scripts:
+      - name: Extract XylenMC project
+        script: |
+          set -euo pipefail
+
+          ARCHIVE="$CM_BUILD_DIR/XylenMC_Native_Overlay_Source.zip"
+          PROJECT_DIR="$CM_BUILD_DIR/xylenmc-project"
+
+          test -f "$ARCHIVE"
+          mkdir -p "$PROJECT_DIR"
+
+          python3 -m zipfile -e "$ARCHIVE" "$PROJECT_DIR"
+
+          SETTINGS_FILE=$(find "$PROJECT_DIR" \
+            -name settings.gradle.kts -type f -print -quit)
+
+          test -n "$SETTINGS_FILE"
+
+          PROJECT_ROOT=$(dirname "$SETTINGS_FILE")
+
+          test -f "$PROJECT_ROOT/app/build.gradle.kts"
+
+          echo "Project found: $PROJECT_ROOT"
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > "$PROJECT_ROOT/local.properties"
+
+          cd "$PROJECT_ROOT"
+
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew --no-daemon --no-configuration-cache :app:assembleDebug
+          else
+            gradle --no-daemon --no-configuration-cache :app:assembleDebug
+          fi
+
+    artifacts:
+      - "**/build/outputs/apk/**/*.apk"
