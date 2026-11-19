@@ -1,4 +1,4 @@
-name: XylenMC Android APK
+name: build-android.yml
 
 on:
   workflow_dispatch:
